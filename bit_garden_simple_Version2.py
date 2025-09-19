@@ -33,21 +33,20 @@ class SimpleBitGarden(EuroPiScript):
 
     def update_menu(self):
         # K1: zmiana pozycji menu - 6 pozycji (0..5)
-        idx = int(k1.value() * len(self.menu_items))
-        idx = min(len(self.menu_items)-1, idx)
+        idx = k1.range(len(self.menu_items))  # Użycie range zamiast value
         if idx != self.menu_idx:
             self.menu_idx = idx
             self.draw_menu(force=True)
 
         # K2: ustaw wartość dla aktualnej pozycji menu
-        k2v = k2.value()
+        k2v = k2.percent()  # Użycie percent zamiast value
         if self.menu_idx < 3:
             new_val = round(k2v, 2)  # 0.00–1.00
             if abs(self.gate_probs[self.menu_idx] - new_val) > 0.01:
                 self.gate_probs[self.menu_idx] = new_val
                 self.draw_menu(force=True)
         else:
-            new_len = int(10 + k2v*990)  # 10–1000 ms
+            new_len = int(10 + k2v * 990)  # 10–1000 ms
             i = self.menu_idx - 3
             if abs(self.gate_lens[i] - new_len) > 3:
                 self.gate_lens[i] = new_len
@@ -81,7 +80,7 @@ class SimpleBitGarden(EuroPiScript):
                 last_menu_update = now
 
             # Obsługa triggera
-            clk = digitalin.read() > 0.5
+            clk = bool(din.value)
             if clk and not last_clock:
                 self.handle_clock()
             last_clock = clk
@@ -92,4 +91,5 @@ class SimpleBitGarden(EuroPiScript):
 script = SimpleBitGarden()
 if __name__ == "__main__":
     script.main()
+
 
