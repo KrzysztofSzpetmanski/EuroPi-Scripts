@@ -8,8 +8,8 @@ class SimpleBitGarden(EuroPiScript):
         self.gate_probs = [0.5, 0.5, 0.5]
         self.gate_lens = [100, 100, 100]
         self.menu_items = [
-            "Gate1 Prob", "Gate2 Prob", "Gate3 Prob",
-            "Gate1 Len", "Gate2 Len", "Gate3 Len"
+            "G1%", "G2%", "G3%",
+            "G1ms", "G2ms", "G3ms"
         ]
         self.menu_idx = 0
         self.gate_out = [cv1, cv2, cv3]
@@ -22,13 +22,16 @@ class SimpleBitGarden(EuroPiScript):
 
     def draw_menu(self, force=False):
         oled.fill(0)
-        for i, item in enumerate(self.menu_items):
+        lines_on_screen = 4
+        # Oblicz początek okna tak, by kursor był zawsze widoczny
+        start = max(0, min(self.menu_idx - lines_on_screen // 2, len(self.menu_items) - lines_on_screen))
+        for disp_line, i in enumerate(range(start, start + lines_on_screen)):
             marker = ">" if i == self.menu_idx else " "
             if i < 3:
                 val = f"{int(self.gate_probs[i]*100)}%"
             else:
                 val = f"{self.gate_lens[i-3]}ms"
-            oled.text(f"{marker}{item}:{val}", 0, i*10)
+            oled.text(f"{marker}{self.menu_items[i]}:{val}", 0, disp_line*8)
         oled.show()
 
     def update_menu(self):
@@ -91,5 +94,3 @@ class SimpleBitGarden(EuroPiScript):
 script = SimpleBitGarden()
 if __name__ == "__main__":
     script.main()
-
-
