@@ -5,29 +5,25 @@ import random
 
 class SimpleBitGarden(EuroPiScript):
     def __init__(self):
-        self.gate_probs = [0.5, 0.5, 0.5]   # Prawdopodobieństwa (0..1)
-        self.gate_lens = [100, 100, 100]    # Długości gate w ms
-        self.menu_idx = 0
+        self.gate_probs = [0.5, 0.5, 0.5]
+        self.gate_lens = [100, 100, 100]
         self.menu_items = [
-            "Gate1 Prob",
-            "Gate2 Prob",
-            "Gate3 Prob",
-            "Gate1 Len",
-            "Gate2 Len",
-            "Gate3 Len"
+            "Gate1 Prob", "Gate2 Prob", "Gate3 Prob",
+            "Gate1 Len", "Gate2 Len", "Gate3 Len"
         ]
+        self.menu_idx = 0
         self.gate_out = [cv1, cv2, cv3]
         self.gate_state = [False, False, False]
         self.gate_timer = [0, 0, 0]
-        self.k1_last = k1.read_position()
-        self.k2_last = k2.read_position()
-        self.draw_menu()
+        self.last_menu_idx = -1
+        self.last_val = -1
+        self.last_draw = 0
+        self.draw_menu(force=True)
 
-    def draw_menu(self):
+    def draw_menu(self, force=False):
         oled.fill(0)
         for i, item in enumerate(self.menu_items):
             marker = ">" if i == self.menu_idx else " "
-            # Wyświetl wartość
             if i < 3:
                 val = f"{int(self.gate_probs[i]*100)}%"
             else:
@@ -35,36 +31,27 @@ class SimpleBitGarden(EuroPiScript):
             oled.text(f"{marker}{item}:{val}", 0, i*10)
         oled.show()
 
-    def handle_menu(self):
-        # K1: zmiana menu_idx (zawsze)
-        k1_pos = k1.read_position()
-        if k1_pos != self.k1_last:
-            diff = k1_pos - self.k1_last
-            if diff != 0:
-                self.menu_idx = (self.menu_idx + diff) % len(self.menu_items)
-                self.draw_menu()
-            self.k1_last = k1_pos
+    def update_menu(self):
+        # K1: zmiana pozycji menu - 6 pozycji (0..5)
+        idx = int(k1.value() * len(self.menu_items))
+        idx = min(len(self.menu_items)-1, idx)
+        if idx != self.menu_idx:
+            self.menu_idx = idx
+            self.draw_menu(force=True)
 
-        # K2: zmiana wartości aktualnej pozycji (zawsze)
-        k2_pos = k2.read_position()
-        if k2_pos != self.k2_last:
-            diff = k2_pos - self.k2_last
-            if diff != 0:
-                self.change_value(diff)
-                self.draw_menu()
-            self.k2_last = k2_pos
-
-    def change_value(self, step):
-        idx = self.menu_idx
-        if idx < 3:
-            # Zmiana prawdopodobieństwa
-            val = self.gate_probs[idx] + 0.05 * step
-            self.gate_probs[idx] = min(1.0, max(0.0, val))
+        # K2: ustaw wartość dla aktualnej pozycji menu
+        k2v = k2.value()
+        if self.menu_idx < 3:
+            new_val = round(k2v, 2)  # 0.00–1.00
+            if abs(self.gate_probs[self.menu_idx] - new_val) > 0.01:
+                self.gate_probs[self.menu_idx] = new_val
+                self.draw_menu(force=True)
         else:
-            # Zmiana długości gate
-            i = idx - 3
-            val = self.gate_lens[i] + 10 * step
-            self.gate_lens[i] = min(1000, max(10, val))
+            new_len = int(10 + k2v*990)  # 10–1000 ms
+            i = self.menu_idx - 3
+            if abs(self.gate_lens[i] - new_len) > 3:
+                self.gate_lens[i] = new_len
+                self.draw_menu(force=True)
 
     def handle_clock(self):
         for ch in range(3):
@@ -85,8 +72,14 @@ class SimpleBitGarden(EuroPiScript):
 
     def main(self):
         last_clock = False
+        last_menu_update = utime.ticks_ms()
         while True:
-            self.handle_menu()
+            now = utime.ticks_ms()
+            # Odświeżenie menu/potencjometrów co 0.1s
+            if utime.ticks_diff(now, last_menu_update) > 100:
+                self.update_menu()
+                last_menu_update = now
+
             # Obsługa triggera
             clk = digitalin.read() > 0.5
             if clk and not last_clock:
@@ -97,3 +90,4 @@ class SimpleBitGarden(EuroPiScript):
             utime.sleep_ms(5)
 
 script = SimpleBitGarden()
+
