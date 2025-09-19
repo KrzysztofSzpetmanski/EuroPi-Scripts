@@ -90,4 +90,7 @@ class SimpleBitGarden(EuroPiScript):
             utime.sleep_ms(5)
 
 script = SimpleBitGarden()
+if __name__ == "__main__":
+    script.main()
+    
 
