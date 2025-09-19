@@ -92,5 +92,4 @@ class SimpleBitGarden(EuroPiScript):
 script = SimpleBitGarden()
 if __name__ == "__main__":
     script.main()
-    
 
