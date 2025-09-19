@@ -6,7 +6,7 @@ import random
 class SimpleBitGarden(EuroPiScript):
     def __init__(self):
         # Chromatyczny zestaw nut
-        self.root_list = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B", "Cb"]
+        self.root_list = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
         # Tryby muzyczne
         self.scale_list = ["Ion", "Dor", "Phryg", "Lyd", "Mixo", "Aeol", "Locr"]
 
@@ -33,9 +33,14 @@ class SimpleBitGarden(EuroPiScript):
         oled.fill(0)
         # ----------- PIERWSZY WIERSZ, y=0 -----------------
         oled.text("scale:", 0, 0)
-        oled.text(self.root_list[self.root_idx], 60, 0)
-        #oled.text("skl:", 54, 0)
-        oled.text(self.scale_list[self.scale_idx], 90, 0)
+        if self.edit_mode and self.menu_idx == 0:
+            oled.text(self.root_list[self.edit_val], 65, 0)
+        else:
+            oled.text(self.root_list[self.root_idx], 60, 0)
+        if self.edit_mode and self.menu_idx == 1:
+            oled.text(self.scale_list[self.edit_val], 95, 0)
+        else:
+            oled.text(self.scale_list[self.scale_idx], 90, 0)
 
         # ----------- POZOSTAŁE WIERSZE --------------------
         # Wiersz 1: G1
