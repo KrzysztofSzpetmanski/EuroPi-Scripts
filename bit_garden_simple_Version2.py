@@ -32,11 +32,11 @@ class SimpleBitGarden(EuroPiScript):
     def draw_menu(self, force=False):
         oled.fill(0)
         # ----------- PIERWSZY WIERSZ, y=0 -----------------
-        oled.text("scale:", 0, 0)
+        oled.text("scl:", 0, 0)
         if self.edit_mode and self.menu_idx == 0:
-            oled.text(self.root_list[self.edit_val], 65, 0)
+            oled.text(self.root_list[self.edit_val], 46, 0)
         else:
-            oled.text(self.root_list[self.root_idx], 60, 0)
+            oled.text(self.root_list[self.root_idx], 37, 0)
         if self.edit_mode and self.menu_idx == 1:
             oled.text(self.scale_list[self.edit_val], 95, 0)
         else:
@@ -79,7 +79,7 @@ class SimpleBitGarden(EuroPiScript):
         # ----------- DODATKOWO: root/scale tryb edycji ----------
         if self.menu_idx == 0:
             marker = ">>" if self.edit_mode else ">"
-            oled.text(marker, 50, 0)
+            oled.text(marker, 30, 0)
         elif self.menu_idx == 1:
             marker = ">>" if self.edit_mode else ">"
             oled.text(marker, 80, 0)
