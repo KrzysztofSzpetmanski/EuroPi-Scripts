@@ -16,7 +16,6 @@ class SimpleBitGarden(EuroPiScript):
             "Gate2 Len",
             "Gate3 Len"
         ]
-        self.edit_mode = False
         self.gate_out = [cv1, cv2, cv3]
         self.gate_state = [False, False, False]
         self.gate_timer = [0, 0, 0]
@@ -28,28 +27,27 @@ class SimpleBitGarden(EuroPiScript):
         oled.fill(0)
         for i, item in enumerate(self.menu_items):
             marker = ">" if i == self.menu_idx else " "
-            edit = "*" if (self.edit_mode and i == self.menu_idx) else " "
             # Wyświetl wartość
             if i < 3:
                 val = f"{int(self.gate_probs[i]*100)}%"
             else:
                 val = f"{self.gate_lens[i-3]}ms"
-            oled.text(f"{marker}{item}:{val}{edit}", 0, i*10)
+            oled.text(f"{marker}{item}:{val}", 0, i*10)
         oled.show()
 
     def handle_menu(self):
-        # K1: zmiana menu_idx (poza edycją)
+        # K1: zmiana menu_idx (zawsze)
         k1_pos = k1.read_position()
-        if not self.edit_mode and k1_pos != self.k1_last:
+        if k1_pos != self.k1_last:
             diff = k1_pos - self.k1_last
             if diff != 0:
                 self.menu_idx = (self.menu_idx + diff) % len(self.menu_items)
                 self.draw_menu()
             self.k1_last = k1_pos
 
-        # K2: zmiana wartości (w edycji)
+        # K2: zmiana wartości aktualnej pozycji (zawsze)
         k2_pos = k2.read_position()
-        if self.edit_mode and k2_pos != self.k2_last:
+        if k2_pos != self.k2_last:
             diff = k2_pos - self.k2_last
             if diff != 0:
                 self.change_value(diff)
@@ -88,11 +86,6 @@ class SimpleBitGarden(EuroPiScript):
     def main(self):
         last_clock = False
         while True:
-            # b1: przełącza tryb edycji
-            if b1.read():
-                self.edit_mode = not self.edit_mode
-                self.draw_menu()
-                utime.sleep_ms(250)
             self.handle_menu()
 
             # Obsługa triggera
