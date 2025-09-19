@@ -5,9 +5,19 @@ import random
 
 class SimpleBitGarden(EuroPiScript):
     def __init__(self):
+        # Chromatyczny zestaw nut
+        self.root_list = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B", "Cb"]
+        # Tryby muzyczne
+        self.scale_list = ["Ion", "Dor", "Phryg", "Lyd", "Mixo", "Aeol", "Locr"]
+
+        self.root_idx = 0    # indeks aktualnego root
+        self.scale_idx = 0   # indeks aktualnej skali
+
         self.gate_probs = [0.5, 0.5, 0.5]
         self.gate_lens = [100, 100, 100]
+        # Menu: root, scale, G1%, G2%, G3%, G1ms, G2ms, G3ms
         self.menu_items = [
+            "Root", "Scale",
             "G1%", "G2%", "G3%",
             "G1ms", "G2ms", "G3ms"
         ]
@@ -15,61 +25,90 @@ class SimpleBitGarden(EuroPiScript):
         self.gate_out = [cv1, cv2, cv3]
         self.gate_state = [False, False, False]
         self.gate_timer = [0, 0, 0]
-        self.edit_mode = False    # Dodane: tryb edycji
-        self.edit_val = None      # Dodane: wartość tymczasowa podczas edycji
+        self.edit_mode = False    # Tryb edycji parametru
+        self.edit_val = None      # Tymczasowa wartość w trakcie edycji
         self.draw_menu(force=True)
 
     def draw_menu(self, force=False):
         oled.fill(0)
-        menu_names = [
-            "G1 %", "G2 %", "G3 %",
-            "G1 ms", "G2 ms", "G3 ms"
-        ]
-        mode_str = "EDIT" if self.edit_mode else "NAV"
-        oled.text(f"{mode_str}: {menu_names[self.menu_idx]}", 0, 0)
-        for i in range(3):
-            y = 8 + i * 8
-            oled.text(f"G{i+1}:", 0, y)
-            # Podświetlanie edytowanego lub wybranego parametru
-            if self.menu_idx == i:
-                marker = ">>" if self.edit_mode else ">"
-            else:
-                marker = " "
-            # Prawdopodobieństwo
-            if self.edit_mode and self.menu_idx == i:
-                val_txt = f"{marker}{int(self.edit_val*100)}%"
-            else:
-                val_txt = f"{marker}{int(self.gate_probs[i]*100)}%"
-            oled.text(val_txt, 28, y)
-            # Długość
-            if self.menu_idx == i+3:
-                marker = ">>" if self.edit_mode else ">"
-            else:
-                marker = " "
-            if self.edit_mode and self.menu_idx == i+3:
-                len_txt = f"{marker}{self.edit_val}ms"
-            else:
-                len_txt = f"{marker}{self.gate_lens[i]}ms"
-            oled.text(len_txt, 78, y)
+        # ----------- PIERWSZY WIERSZ, y=0 -----------------
+        oled.text("scale:", 0, 0)
+        oled.text(self.root_list[self.root_idx], 60, 0)
+        #oled.text("skl:", 54, 0)
+        oled.text(self.scale_list[self.scale_idx], 90, 0)
+
+        # ----------- POZOSTAŁE WIERSZE --------------------
+        # Wiersz 1: G1
+        y = 9
+        g = 0
+        marker_p = ">>" if self.edit_mode and self.menu_idx == 2 else (">" if self.menu_idx == 2 else " ")
+        prob_txt = f"{marker_p}{int(self.edit_val*100) if self.edit_mode and self.menu_idx==2 else int(self.gate_probs[0]*100)}%"
+        marker_l = ">>" if self.edit_mode and self.menu_idx == 5 else (">" if self.menu_idx == 5 else " ")
+        len_txt = f"{marker_l}{self.edit_val if self.edit_mode and self.menu_idx==5 else self.gate_lens[0]}ms"
+        oled.text("G1:", 0, y)
+        oled.text(prob_txt, 28, y)
+        oled.text(len_txt, 78, y)
+
+        # Wiersz 2: G2
+        y = 17
+        g = 1
+        marker_p = ">>" if self.edit_mode and self.menu_idx == 3 else (">" if self.menu_idx == 3 else " ")
+        prob_txt = f"{marker_p}{int(self.edit_val*100) if self.edit_mode and self.menu_idx==3 else int(self.gate_probs[1]*100)}%"
+        marker_l = ">>" if self.edit_mode and self.menu_idx == 6 else (">" if self.menu_idx == 6 else " ")
+        len_txt = f"{marker_l}{self.edit_val if self.edit_mode and self.menu_idx==6 else self.gate_lens[1]}ms"
+        oled.text("G2:", 0, y)
+        oled.text(prob_txt, 28, y)
+        oled.text(len_txt, 78, y)
+
+        # Wiersz 3: G3
+        y = 25
+        g = 2
+        marker_p = ">>" if self.edit_mode and self.menu_idx == 4 else (">" if self.menu_idx == 4 else " ")
+        prob_txt = f"{marker_p}{int(self.edit_val*100) if self.edit_mode and self.menu_idx==4 else int(self.gate_probs[2]*100)}%"
+        marker_l = ">>" if self.edit_mode and self.menu_idx == 7 else (">" if self.menu_idx == 7 else " ")
+        len_txt = f"{marker_l}{self.edit_val if self.edit_mode and self.menu_idx==7 else self.gate_lens[2]}ms"
+        oled.text("G3:", 0, y)
+        oled.text(prob_txt, 28, y)
+        oled.text(len_txt, 78, y)
+
+        # ----------- DODATKOWO: root/scale tryb edycji ----------
+        if self.menu_idx == 0:
+            marker = ">>" if self.edit_mode else ">"
+            oled.text(marker, 50, 0)
+        elif self.menu_idx == 1:
+            marker = ">>" if self.edit_mode else ">"
+            oled.text(marker, 80, 0)
         oled.show()
 
     def update_menu(self):
         if not self.edit_mode:
-            # k2: zmiana pozycji menu - 6 pozycji (0..5)
+            # k2: zmiana pozycji menu - 8 pozycji (0..7)
             idx = k2.range(len(self.menu_items))
             if idx != self.menu_idx:
                 self.menu_idx = idx
                 self.draw_menu(force=True)
         else:
-            # W trybie edycji K2 zmienia TYLKO wybrany parametr (reszta się nie rusza)
+            # Tryb edycji
             k2v = k2.percent()
-            if self.menu_idx < 3:
+            if self.menu_idx == 0:
+                # Edycja root
+                new_idx = int(k2v * (len(self.root_list) - 1) + 0.5)
+                if self.edit_val != new_idx:
+                    self.edit_val = new_idx
+                    self.draw_menu(force=True)
+            elif self.menu_idx == 1:
+                # Edycja skali
+                new_idx = int(k2v * (len(self.scale_list) - 1) + 0.5)
+                if self.edit_val != new_idx:
+                    self.edit_val = new_idx
+                    self.draw_menu(force=True)
+            elif 2 <= self.menu_idx <= 4:
                 # Edycja prawdopodobieństwa
                 new_val = round(k2v, 2)
                 if self.edit_val != new_val:
                     self.edit_val = new_val
                     self.draw_menu(force=True)
-            else:
+            elif 5 <= self.menu_idx <= 7:
                 # Edycja długości
                 new_len = int(10 + k2v * 990)
                 if self.edit_val != new_len:
@@ -80,18 +119,26 @@ class SimpleBitGarden(EuroPiScript):
         # Przycisk b2: start/koniec edycji
         if not self.edit_mode:
             # Wejście w tryb edycji - zapamiętaj aktualną wartość
-            if self.menu_idx < 3:
-                self.edit_val = self.gate_probs[self.menu_idx]
-            else:
-                self.edit_val = self.gate_lens[self.menu_idx-3]
+            if self.menu_idx == 0:
+                self.edit_val = self.root_idx
+            elif self.menu_idx == 1:
+                self.edit_val = self.scale_idx
+            elif 2 <= self.menu_idx <= 4:
+                self.edit_val = self.gate_probs[self.menu_idx - 2]
+            elif 5 <= self.menu_idx <= 7:
+                self.edit_val = self.gate_lens[self.menu_idx - 5]
             self.edit_mode = True
             self.draw_menu(force=True)
         else:
             # Zapisz edytowaną wartość i wyjdź z trybu edycji
-            if self.menu_idx < 3:
-                self.gate_probs[self.menu_idx] = self.edit_val
-            else:
-                self.gate_lens[self.menu_idx-3] = self.edit_val
+            if self.menu_idx == 0:
+                self.root_idx = self.edit_val
+            elif self.menu_idx == 1:
+                self.scale_idx = self.edit_val
+            elif 2 <= self.menu_idx <= 4:
+                self.gate_probs[self.menu_idx - 2] = self.edit_val
+            elif 5 <= self.menu_idx <= 7:
+                self.gate_lens[self.menu_idx - 5] = self.edit_val
             self.edit_mode = False
             self.edit_val = None
             self.draw_menu(force=True)
@@ -142,4 +189,4 @@ class SimpleBitGarden(EuroPiScript):
 script = SimpleBitGarden()
 if __name__ == "__main__":
     script.main()
-
+    
