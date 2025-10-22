@@ -12,6 +12,13 @@ import math
 import random
 import time
 
+# --- Ustawienia "na sztywno" zamiast europi_config ---
+MAX_INPUT_VOLTAGE = 10.0
+MIN_VOLTAGE = 0.0
+MAX_VOLTAGE = 10.0
+MIN_FREQUENCY = 0.01
+MAX_FREQUENCY = 1.0
+
 ssoled = OledWithScreensaver()
 
 CLIP_MODE_LIMIT = 0
@@ -22,9 +29,6 @@ CLIP_MODE_NAMES = [
     "Fold",
     "Thru"
 ]
-
-AIN_MODE_FREQUENCY = "frequency"
-AIN_MODE_CURVE = "curve"
 
 class Point2D:
     def __init__(self, x, y):
@@ -109,8 +113,7 @@ class BezierCurve:
         return b
 
 class OutputChannel:
-    def __init__(self, script, frequency_in, curve_in, cv_out):
-        self.script = script
+    def __init__(self, frequency_in, curve_in, cv_out):
         self.curve = BezierCurve()
         self.cv_out = cv_out
         self.frequency_in = frequency_in
@@ -130,14 +133,14 @@ class OutputChannel:
     def update(self, clip_mode=CLIP_MODE_LIMIT):
         now = time.ticks_ms()
         self.curve_k = self.curve_in.percent() * 2 - 1
-        self.frequency = self.frequency_in.percent() * (self.script.config.MAX_FREQUENCY - self.script.config.MIN_FREQUENCY) + self.script.config.MIN_FREQUENCY
+        self.frequency = self.frequency_in.percent() * (MAX_FREQUENCY - MIN_FREQUENCY) + MIN_FREQUENCY
         t = 1000.0/self.frequency
         elapsed_ms = time.ticks_diff(now, self.last_tick_at)
         if elapsed_ms >= t:
             self.change_voltage()
             self.last_tick_at = now
             elapsed_ms = 0
-        self.voltage_out = self.curve.value_at(elapsed_ms / t, self.curve_k) * (self.script.config.MAX_VOLTAGE - self.script.config.MIN_VOLTAGE) + self.script.config.MIN_VOLTAGE
+        self.voltage_out = self.curve.value_at(elapsed_ms / t, self.curve_k) * (MAX_VOLTAGE - MIN_VOLTAGE) + MIN_VOLTAGE
 
         if clip_mode == CLIP_MODE_LIMIT:
             self.voltage_out = self.clip_limit(self.voltage_out)
@@ -147,31 +150,31 @@ class OutputChannel:
             self.voltage_out = self.clip_thru(self.voltage_out)
 
         self.cv_out.voltage(self.voltage_out)
-        self.vizualization_samples.append(int((self.voltage_out - self.script.config.MIN_VOLTAGE) / (self.script.config.MAX_VOLTAGE - self.script.config.MIN_VOLTAGE) * OLED_HEIGHT/3))
+        self.vizualization_samples.append(int((self.voltage_out - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * OLED_HEIGHT/3))
         if len(self.vizualization_samples) > OLED_WIDTH:
             self.vizualization_samples.pop(0)
 
     def clip_limit(self, v):
-        if v < self.script.config.MIN_VOLTAGE:
-            return self.script.config.MIN_VOLTAGE
-        elif v > self.script.config.MAX_VOLTAGE:
-            return self.script.config.MAX_VOLTAGE
+        if v < MIN_VOLTAGE:
+            return MIN_VOLTAGE
+        elif v > MAX_VOLTAGE:
+            return MAX_VOLTAGE
         else:
             return v
 
     def clip_fold(self, v):
-        if v < self.script.config.MIN_VOLTAGE:
-            return self.script.config.MIN_VOLTAGE - v
-        elif v > self.script.config.MAX_VOLTAGE:
-            return self.script.config.MAX_VOLTAGE + (self.script.config.MAX_VOLTAGE - v)
+        if v < MIN_VOLTAGE:
+            return MIN_VOLTAGE - v
+        elif v > MAX_VOLTAGE:
+            return MAX_VOLTAGE + (MAX_VOLTAGE - v)
         else:
             return v
 
     def clip_thru(self, v):
-        if v < self.script.config.MIN_VOLTAGE:
-            return self.script.config.MAX_VOLTAGE - (self.script.config.MIN_VOLTAGE - v)
-        elif v > self.script.config.MAX_VOLTAGE:
-            return self.script.config.MIN_VOLTAGE - (self.script.config.MAX_VOLTAGE - v)
+        if v < MIN_VOLTAGE:
+            return MAX_VOLTAGE - (MIN_VOLTAGE - v)
+        elif v > MAX_VOLTAGE:
+            return MIN_VOLTAGE - (MAX_VOLTAGE - v)
         else:
             return v
 
@@ -183,53 +186,13 @@ class BezierSingle(EuroPiScript):
         self.curve_in = KnobBank.builder(k2).with_unlocked_knob("main").build()
         self.clip_mode = cfg.get("clip_mode", CLIP_MODE_LIMIT)
         self.settings_dirty = False
-        self.curve = OutputChannel(self, self.frequency_in["main"], self.curve_in["main"], cv1)
+        self.curve = OutputChannel(self.frequency_in["main"], self.curve_in["main"], cv1)
 
         @b1.handler
         def on_b1_press():
             self.clip_mode = (self.clip_mode + 1) % len(CLIP_MODE_NAMES)
             self.settings_dirty = True
             ssoled.notify_user_interaction()
-
-    @classmethod
-    def config_points(cls):
-        import europi_config
-        def restrict_input_voltage(v):
-            if v > europi_config.MAX_INPUT_VOLTAGE:
-                return europi_config.MAX_INPUT_VOLTAGE
-            return v
-        return [
-            configuration.floatingPoint(
-                name="MAX_INPUT_VOLTAGE",
-                minimum=0.0,
-                maximum=europi_config.MAX_INPUT_VOLTAGE,
-                default=restrict_input_voltage(10.0)
-            ),
-            configuration.floatingPoint(
-                name="MIN_VOLTAGE",
-                minimum=0.0,
-                maximum=europi_config.MAX_OUTPUT_VOLTAGE,
-                default=0.0
-            ),
-            configuration.floatingPoint(
-                name="MAX_VOLTAGE",
-                minimum=0.0,
-                maximum=europi_config.MAX_OUTPUT_VOLTAGE,
-                default=europi_config.MAX_OUTPUT_VOLTAGE
-            ),
-            configuration.floatingPoint(
-                name="MIN_FREQUENCY",
-                minimum=0.001,
-                maximum=10.0,
-                default=0.01
-            ),
-            configuration.floatingPoint(
-                name="MAX_FREQUENCY",
-                minimum=0.001,
-                maximum=10.0,
-                default=1.0
-            )
-        ]
 
     def save(self):
         cfg = {
@@ -266,3 +229,4 @@ class BezierSingle(EuroPiScript):
 
 if __name__ == "__main__":
     BezierSingle().main()
+    
