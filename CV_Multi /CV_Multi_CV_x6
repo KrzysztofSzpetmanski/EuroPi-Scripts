@@ -6,6 +6,8 @@ from europi_script import EuroPiScript
 from experimental.knobs import *
 from experimental.math_extras import solve_linear_system
 from experimental.screensaver import OledWithScreensaver
+#from europi import Oled  # jeśli nie jest już zaimportowany
+
 
 import random
 import math
@@ -19,7 +21,10 @@ MAX_FREQUENCY = 10.0
 FILTER_WINDOW = 5
 OLED_UPDATE_INTERVAL = 0.1  # sekundy
 
-ssoled = OledWithScreensaver()
+# ssoled = OledWithScreensaver()
+ssoled = OledWithScreensaver(enable_screensaver=False)
+
+
 
 # -------- Random Step CV --------
 class RandomStepCV:
@@ -257,3 +262,4 @@ class CVMultiCombo(EuroPiScript):
 
 if __name__ == "__main__":
     CVMultiCombo().main()
+
